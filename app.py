@@ -7,10 +7,10 @@ PORT = int(os.getenv("PORT", 3000))
 
 # Create a connection to the MySQL database
 db = mysql.connector.connect(
-    host="bmwnqwmtaqw5xp1cwaty-mysql.services.clever-cloud.com",
-    user="uvqpshad4m6dgq9v",
-    password="LAoMxm0l0mrzxu4sJGuk",  # Replace with your MySQL password
-    database="bmwnqwmtaqw5xp1cwaty"
+    host="bvvcotes65k17jl2qy0e-mysql.services.clever-cloud.com",
+    user="uoefpdurpcydbpmq",
+    password="6ecbpoolmcSW08SVZ1oO",  # Replace with your MySQL password
+    database="bvvcotes65k17jl2qy0e"
 )
 
 # In-memory storage for user data (for simplicity)
@@ -45,7 +45,7 @@ def ussd():
         elif user_input[1] == '2':
             # View votes option selected
             cursor = db.cursor(dictionary=True)
-            cursor.execute('SELECT voted_candidate, COUNT(*) as count FROM votes WHERE voted_candidate != "Viewed Votes" GROUP BY voted_candidate')
+            cursor.execute('SELECT voted_candidate, COUNT(*) as count FROM votes GROUP BY voted_candidate')
             results = cursor.fetchall()
             response = 'END Votes:\n' if user_languages[phone_number] == 'en' else 'END Kura:\n'
             for row in results:
@@ -55,7 +55,7 @@ def ussd():
             # Insert view votes record into the database
             cursor = db.cursor()
             view_vote_data = (session_id, phone_number, user_languages[phone_number], 'Viewed Votes')
-            insert_query = 'INSERT INTO votes (session_id, phone_number, language_used, voted_candidate) VALUES (%s, %s, %s, %s)'
+            insert_query = 'INSERT INTO view_votes (session_id, phone_number, language_used, view_candidate) VALUES (%s, %s, %s, %s)'
             cursor.execute(insert_query, view_vote_data)
             db.commit()
             cursor.close()
