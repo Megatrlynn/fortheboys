@@ -29,7 +29,7 @@ def ussd():
 
     if len(user_input) == 1 and user_input[0] == '':
         # First level menu: Language selection
-        response = 'CON Welcome to Mayor voting booth\n1. English\n2. Swahili'
+        response = 'CON Guild Voting Campaign\n1. English\n2. Swahili'
     elif len(user_input) == 1 and user_input[0] != '':
         # Save user's language choice and move to the main menu
         user_languages[phone_number] = 'en' if user_input[0] == '1' else 'sw'
@@ -41,7 +41,7 @@ def ussd():
                 response = 'END You have already voted. Thank you!' if user_languages[phone_number] == 'en' else 'END Tayari umeshapiga kura. Asante!'
             else:
                 # Voting option selected
-                response = 'CON Select a candidate:\n1. Raymond IGABINEZA\n2. Florence UMUTONIWASE\n3. Jean Paul KWIBUKA\n4. Gaella UWAYO\n5. Danny HABIMANA' if user_languages[phone_number] == 'en' else 'CON Chagua mgombea:\n1. Raymond IGABINEZA\n2. Florence UMUTONIWASE\n3. Jean Paul KWIBUKA\n4. Gaella UWAYO\n5. Danny HABIMANA'
+                response = 'CON Select a candidate:\n1. Nadia UWERA\n2. Gaella KEZA\n3. Raemond NGABO\n4. Vesper BWIMBA\n5. Geneva KUNDWA' if user_languages[phone_number] == 'en' else 'CON Chagua mgombea:\n1. Nadia UWERA\n2. Gaella KEZA\n3. Raemond NGABO\n4. Vesper BWIMBA\n5. Geneva KUNDWA'
         elif user_input[1] == '2':
             # View votes option selected
             cursor = db.cursor(dictionary=True)
@@ -62,7 +62,7 @@ def ussd():
     elif len(user_input) == 3:
         # Voting confirmation
         candidate_index = int(user_input[2]) - 1
-        candidate_names = ["Raymond I. ", "Florence U. ", "Jean Paul K. ", "Gaella U. ", "Danny H. "]
+        candidate_names = ["Nadia UWERA ", "Gaella KEZA ", "Raemond NGABO ", "Vesper BWIMBA ", "Geneva KUNDWA "]
         if 0 <= candidate_index < len(candidate_names):
             voters.add(phone_number)  # Mark this phone number as having voted
             response = f'END Thank you for voting for {candidate_names[candidate_index]}!' if user_languages[phone_number] == 'en' else f'END Asante kwa kumpigia kura {candidate_names[candidate_index]}!'
