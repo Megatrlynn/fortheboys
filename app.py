@@ -5,7 +5,7 @@ import os
 app = Flask(__name__)
 PORT = int(os.getenv("PORT", 3000))
 
-# Create a connection to the MySQL database
+# Connection to the MySQL database
 db = mysql.connector.connect(
     host="bvvcotes65k17jl2qy0e-mysql.services.clever-cloud.com",
     user="uoefpdurpcydbpmq",
@@ -49,10 +49,14 @@ def ussd():
             response = 'CON Choisissez une option:\n1. Voter pour un candidat\n2. Voir les votes'
     elif len(user_input) == 2:
         if user_input[1] == '1':
+            # Check if the phone number has already voted in the database
             cursor = db.cursor()
-            cursor.execute('SELECT COUNT(*) FROM votes WHERE phone_number = %s', (phone_number,))
-            result = cursor.fetchone()
-            if result[0] > 0:
+            query = 'SELECT COUNT(*) FROM votes WHERE phone_number = %s'
+            cursor.execute(query, (phone_number,))
+            vote_count = cursor.fetchone()[0]
+            cursor.close()
+
+            if vote_count > 0:
                 if user_languages[phone_number] == 'en':
                     response = 'END You have already voted. Thank you!'
                 elif user_languages[phone_number] == 'sw':
@@ -70,7 +74,6 @@ def ussd():
                     response = 'CON Hitamo umukandida:\n1. Nadia UWERA\n2. Gaella KEZA\n3. Raemond NGABO\n4. Vesper BWIMBA\n5. Geneva KUNDWA'
                 elif user_languages[phone_number] == 'fr':
                     response = 'CON Choisissez un candidat:\n1. Nadia UWERA\n2. Gaella KEZA\n3. Raemond NGABO\n4. Vesper BWIMBA\n5. Geneva KUNDWA'
-            cursor.close()
         elif user_input[1] == '2':
             cursor = db.cursor(dictionary=True)
             cursor.execute('SELECT voted_candidate, COUNT(*) as count FROM votes GROUP BY voted_candidate')
@@ -97,21 +100,22 @@ def ussd():
         candidate_index = int(user_input[2]) - 1
         candidate_names = ["Nadia UWERA", "Gaella KEZA", "Raemond NGABO", "Vesper BWIMBA", "Geneva KUNDWA"]
         if 0 <= candidate_index < len(candidate_names):
-            if user_languages[phone_number] == 'en':
-                response = f'END Thank you for voting for {candidate_names[candidate_index]}!'
-            elif user_languages[phone_number] == 'sw':
-                response = f'END Asante kwa kumpigia kura {candidate_names[candidate_index]}!'
-            elif user_languages[phone_number] == 'rw':
-                response = f'END Murakoze gutorera {candidate_names[candidate_index]}!'
-            elif user_languages[phone_number] == 'fr':
-                response = f'END Merci d\'avoir voté pour {candidate_names[candidate_index]}!'
-
+            # Mark this phone number as having voted and insert the record into the database
             cursor = db.cursor()
             vote_data = (session_id, phone_number, user_languages[phone_number], candidate_names[candidate_index])
             insert_query = 'INSERT INTO votes (session_id, phone_number, language_used, voted_candidate) VALUES (%s, %s, %s, %s)'
             cursor.execute(insert_query, vote_data)
             db.commit()
             cursor.close()
+
+            if user_languages[phone_number] == 'en':
+                response = f'END Thank you for voting for {candidate_names[candidate_index]}!'
+            elif user_languages[phone_number] == 'sw':
+                response = f'END Asante kwa kumpigia kura {candidate_names[candidate_index]}!'
+            elif user_languages[phone_number] == 'rw':
+                response = f'END Murakoze gutora {candidate_names[candidate_index]}!'
+            elif user_languages[phone_number] == 'fr':
+                response = f'END Merci d\'avoir voté pour {candidate_names[candidate_index]}!'
         else:
             if user_languages[phone_number] == 'en':
                 response = 'END Invalid selection. Please try again.'
