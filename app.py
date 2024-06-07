@@ -9,12 +9,11 @@ PORT = int(os.getenv("PORT", 3000))
 db = mysql.connector.connect(
     host="bvvcotes65k17jl2qy0e-mysql.services.clever-cloud.com",
     user="uoefpdurpcydbpmq",
-    password="6ecbpoolmcSW08SVZ1oO",  # Replace with your MySQL password
+    password="6ecbpoolmcSW08SVZ1oO",
     database="bvvcotes65k17jl2qy0e"
 )
 
-# In-memory storage for user data (for simplicity)
-voters = set()  # Set to track phone numbers that have already voted
+# In-memory storage for user data
 user_languages = {}  # Dictionary to store the language preference of each user
 
 @app.route('/ussd', methods=['POST'])
@@ -28,10 +27,8 @@ def ussd():
     user_input = text.split('*')
 
     if len(user_input) == 1 and user_input[0] == '':
-        # First level menu: Language selection
         response = 'CON Guild Voting Campaign\n1. English\n2. Swahili\n3. Kinyarwanda\n4. French'
     elif len(user_input) == 1 and user_input[0] != '':
-        # Save user's language choice and move to the main menu
         language_choice = user_input[0]
         if language_choice == '1':
             user_languages[phone_number] = 'en'
@@ -52,8 +49,10 @@ def ussd():
             response = 'CON Choisissez une option:\n1. Voter pour un candidat\n2. Voir les votes'
     elif len(user_input) == 2:
         if user_input[1] == '1':
-            # Check if the phone number has already voted
-            if phone_number in voters:
+            cursor = db.cursor()
+            cursor.execute('SELECT COUNT(*) FROM votes WHERE phone_number = %s', (phone_number,))
+            result = cursor.fetchone()
+            if result[0] > 0:
                 if user_languages[phone_number] == 'en':
                     response = 'END You have already voted. Thank you!'
                 elif user_languages[phone_number] == 'sw':
@@ -63,7 +62,6 @@ def ussd():
                 elif user_languages[phone_number] == 'fr':
                     response = 'END Vous avez déjà voté. Merci!'
             else:
-                # Voting option selected
                 if user_languages[phone_number] == 'en':
                     response = 'CON Select a candidate:\n1. Nadia UWERA\n2. Gaella KEZA\n3. Raemond NGABO\n4. Vesper BWIMBA\n5. Geneva KUNDWA'
                 elif user_languages[phone_number] == 'sw':
@@ -72,8 +70,8 @@ def ussd():
                     response = 'CON Hitamo umukandida:\n1. Nadia UWERA\n2. Gaella KEZA\n3. Raemond NGABO\n4. Vesper BWIMBA\n5. Geneva KUNDWA'
                 elif user_languages[phone_number] == 'fr':
                     response = 'CON Choisissez un candidat:\n1. Nadia UWERA\n2. Gaella KEZA\n3. Raemond NGABO\n4. Vesper BWIMBA\n5. Geneva KUNDWA'
+            cursor.close()
         elif user_input[1] == '2':
-            # View votes option selected
             cursor = db.cursor(dictionary=True)
             cursor.execute('SELECT voted_candidate, COUNT(*) as count FROM votes GROUP BY voted_candidate')
             results = cursor.fetchall()
@@ -89,7 +87,6 @@ def ussd():
                 response += f'{row["voted_candidate"]}: {row["count"]} votes\n'
             cursor.close()
 
-            # Insert view votes record into the database
             cursor = db.cursor()
             view_vote_data = (session_id, phone_number, user_languages[phone_number], 'Viewed Votes')
             insert_query = 'INSERT INTO view_votes (session_id, phone_number, language_used, view_candidate) VALUES (%s, %s, %s, %s)'
@@ -97,21 +94,18 @@ def ussd():
             db.commit()
             cursor.close()
     elif len(user_input) == 3:
-        # Voting confirmation
         candidate_index = int(user_input[2]) - 1
         candidate_names = ["Nadia UWERA", "Gaella KEZA", "Raemond NGABO", "Vesper BWIMBA", "Geneva KUNDWA"]
         if 0 <= candidate_index < len(candidate_names):
-            voters.add(phone_number)  # Mark this phone number as having voted
             if user_languages[phone_number] == 'en':
                 response = f'END Thank you for voting for {candidate_names[candidate_index]}!'
             elif user_languages[phone_number] == 'sw':
                 response = f'END Asante kwa kumpigia kura {candidate_names[candidate_index]}!'
             elif user_languages[phone_number] == 'rw':
-                response = f'END Murakoze gutora {candidate_names[candidate_index]}!'
+                response = f'END Murakoze gutorera {candidate_names[candidate_index]}!'
             elif user_languages[phone_number] == 'fr':
                 response = f'END Merci d\'avoir voté pour {candidate_names[candidate_index]}!'
 
-            # Insert voting record into the database
             cursor = db.cursor()
             vote_data = (session_id, phone_number, user_languages[phone_number], candidate_names[candidate_index])
             insert_query = 'INSERT INTO votes (session_id, phone_number, language_used, voted_candidate) VALUES (%s, %s, %s, %s)'
