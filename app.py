@@ -85,7 +85,12 @@ def ussd():
                     response += f'{candidate[0]}. {candidate[1]}\n'
         elif user_input[1] == '2':
             cursor = db.cursor(dictionary=True)
-            cursor.execute('SELECT voted_candidate, COUNT(*) as count FROM votes GROUP BY voted_candidate')
+            cursor.execute('''
+                SELECT c.cand_name, COUNT(*) as count 
+                FROM votes v
+                JOIN candidates c ON v.voted_candidate = c.cand_id
+                GROUP BY c.cand_name
+            ''')
             results = cursor.fetchall()
             cursor.close()
 
@@ -98,7 +103,7 @@ def ussd():
             elif user_languages[phone_number] == 'fr':
                 response = 'END Votes:\n'
             for row in results:
-                response += f'{row["voted_candidate"]}: {row["count"]} votes\n'
+                response += f'{row["cand_name"]}: {row["count"]} votes\n'
 
             cursor = db.cursor()
             view_vote_data = (session_id, phone_number, user_languages[phone_number], 'Viewed Votes')
@@ -107,9 +112,9 @@ def ussd():
             db.commit()
             cursor.close()
     elif len(user_input) == 3:
-        candidate_index = int(user_input[2])
+        candidate_id = int(user_input[2])
         cursor = db.cursor()
-        cursor.execute('SELECT cand_name FROM candidates WHERE cand_id = %s', (candidate_index,))
+        cursor.execute('SELECT cand_name FROM candidates WHERE cand_id = %s', (candidate_id,))
         candidate_name_result = cursor.fetchone()
         cursor.close()
 
@@ -117,7 +122,7 @@ def ussd():
             candidate_name = candidate_name_result[0]
             # Mark this phone number as having voted and insert the record into the database
             cursor = db.cursor()
-            vote_data = (session_id, phone_number, user_languages[phone_number], candidate_name)
+            vote_data = (session_id, phone_number, user_languages[phone_number], candidate_id)
             insert_query = 'INSERT INTO votes (session_id, phone_number, language_used, voted_candidate) VALUES (%s, %s, %s, %s)'
             cursor.execute(insert_query, vote_data)
             db.commit()
